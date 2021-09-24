@@ -77,11 +77,6 @@ namespace Microsoft.Coyote.Testing.Systematic
         /// </summary>
         private int Epochs;
 
-        // /// <summary>
-        // /// Count of states explored.
-        // /// </summary>
-        // private int StateCounter;
-
         /// <summary>
         /// Initializes a new instance of the <see cref="QLearningStrategy"/> class.
         /// It uses the specified random number generator.
@@ -101,7 +96,6 @@ namespace Microsoft.Coyote.Testing.Systematic
             this.FailureInjectionReward = -1000;
             this.BasicActionReward = -1;
             this.Epochs = 0;
-            // this.StateCounter = 0;
         }
 
         /// <inheritdoc/>
@@ -315,8 +309,6 @@ namespace Microsoft.Coyote.Testing.Systematic
             {
                 qValues = new Dictionary<ulong, double>();
                 this.OperationQTable.Add(state, qValues);
-                // increment state counter as state has not been seen previously
-                // this.StateCounter++;
             }
 
             if (!qValues.ContainsKey(this.TrueChoiceOpValue))
@@ -340,8 +332,6 @@ namespace Microsoft.Coyote.Testing.Systematic
             {
                 qValues = new Dictionary<ulong, double>();
                 this.OperationQTable.Add(state, qValues);
-                // increments statecounter as state not seen previously
-                // this.StateCounter++;
             }
 
             for (ulong i = 0; i < (ulong)maxValue; i++)
@@ -361,15 +351,18 @@ namespace Microsoft.Coyote.Testing.Systematic
         /// </summary>
         internal override bool InitializeNextIteration(uint iteration)
         {
-            // string fileName = "../../../../../coyote-practice/tutorials/Chord/out/StateCoverage/QL/data.csv";
+            // Dump the statecoverage data in a .csv file, File path to be specified according to the benchmark being used.
+            string fileName = "../../../Benchmarks/Chord/out/StateCoverage/QL/data_" + DateTime.Now.ToString("dd_MM_yyyy_hh_mm_ss") + ".csv";
+            string epochs = this.Epochs.ToString();
+            string statecount = this.OperationQTable.Count.ToString();
 
-            // if (!File.Exists(fileName))
-            // {
-            //     string dataHeader = "Epoch" + "," + "Statecount" + Environment.NewLine;
-            //     File.WriteAllText(fileName, dataHeader);
-            // }
+            if (!File.Exists(fileName))
+            {
+                string dataHeader = "Epoch" + "," + "Statecount" + Environment.NewLine;
+                File.WriteAllText(fileName, dataHeader);
+            }
 
-            // File.AppendAllText(fileName, this.Epochs.ToString() + "," + this.StateCounter.ToString() + Environment.NewLine);
+            File.AppendAllText(fileName, epochs + "," + statecount + Environment.NewLine);
 
             this.LearnQValues();
             this.ExecutionPath.Clear();
