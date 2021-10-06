@@ -38,6 +38,11 @@ namespace Microsoft.Coyote.Runtime
         internal int HashedProgramState;
 
         /// <summary>
+        /// A value that represents the maximum inbox size among all enabled actors in current program state.
+        /// </summary>
+        internal int MaxInboxSize;
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="AsyncOperation"/> class.
         /// </summary>
         internal AsyncOperation(ulong operationId, string name)

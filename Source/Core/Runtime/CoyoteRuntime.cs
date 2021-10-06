@@ -1210,6 +1210,9 @@ namespace Microsoft.Coyote.Runtime
                     current.HashedProgramState = this.GetHashedProgramState();
                 }
 
+                // Update the maximum inbox size of all enabled actors in the current program state.
+                current.MaxInboxSize = this.GetMaxInboxSize();
+
                 // Choose the next operation to schedule, if there is one enabled.
                 if (!this.TryGetNextEnabledOperation(current, isYielding, out AsyncOperation next))
                 {
@@ -1650,6 +1653,24 @@ namespace Microsoft.Coyote.Runtime
                 hash = (hash * 31) + this.SpecificationEngine.GetHashedMonitorState();
                 return hash;
             }
+        }
+
+        /// <summary>
+        /// Returns the maximum of the inbox sizes of all currently registered operations.
+        /// </summary>
+        private int GetMaxInboxSize()
+        {
+            int size = 0;
+
+            foreach (var operation in this.GetRegisteredOperations().OrderBy(op => op.Id))
+            {
+                if (operation is ActorOperation actorOperation && size <= actorOperation.Actor.Inbox.Size)
+                {
+                    size = actorOperation.Actor.Inbox.Size;
+                }
+            }
+
+            return size;
         }
 
         /// <summary>

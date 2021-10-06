@@ -24,7 +24,7 @@ namespace Microsoft.Coyote.Testing.Systematic
         /// step of the execution is represented by an operation and a value
         /// represented the program state after the operation executed.
         /// </summary>
-        private readonly LinkedList<(ulong op, AsyncOperationType type, int state)> ExecutionPath;
+        private readonly LinkedList<(ulong op, AsyncOperationType type, int state, int maxinboxsize)> ExecutionPath;
 
         /// <summary>
         /// Map from values representing program states to their transition
@@ -77,6 +77,10 @@ namespace Microsoft.Coyote.Testing.Systematic
         /// </summary>
         private int Epochs;
 
+        // Filename to dispose Inbox size data for testing purposes. Prepares file before next iteration.
+        // private string fileName = "out/InboxSize/QL/data_" + DateTime.Now.ToString("dd_MM_yyyy_hh_mm_ss") + "_" + Guid.NewGuid().ToString() + ".csv";
+        // private string dataHeader = "Epoch" + "," + "MaxInboxSize" + Environment.NewLine;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="QLearningStrategy"/> class.
         /// It uses the specified random number generator.
@@ -85,7 +89,7 @@ namespace Microsoft.Coyote.Testing.Systematic
             : base(maxSteps, random)
         {
             this.OperationQTable = new Dictionary<int, Dictionary<ulong, double>>();
-            this.ExecutionPath = new LinkedList<(ulong, AsyncOperationType, int)>();
+            this.ExecutionPath = new LinkedList<(ulong, AsyncOperationType, int, int)>();
             this.TransitionFrequencies = new Dictionary<int, ulong>();
             this.PreviousOperation = 0;
             this.LearningRate = 0.3;
@@ -124,6 +128,11 @@ namespace Microsoft.Coyote.Testing.Systematic
         {
             int state = this.CaptureExecutionStep(current);
             this.InitializeBooleanChoiceQValues(state);
+
+            double probdist = this.OperationQTable[state][this.TrueChoiceOpValue] - this.OperationQTable[state][this.FalseChoiceOpValue];
+
+            // append distribution data to .csv file.
+            File.AppendAllText("out/Distribution/QL/data" + ".csv", "," + this.Epochs.ToString() + "," + probdist.ToString() + Environment.NewLine);
 
             next = this.GetNextBooleanChoiceByPolicy(state);
 
@@ -262,9 +271,11 @@ namespace Microsoft.Coyote.Testing.Systematic
         private int CaptureExecutionStep(AsyncOperation current)
         {
             int state = current.HashedProgramState;
+            // Adding the inbox size in the execution path.
+            int maxinboxsize = current.MaxInboxSize;
 
             // Update the execution path with the current state.
-            this.ExecutionPath.AddLast((this.PreviousOperation, current.Type, state));
+            this.ExecutionPath.AddLast((this.PreviousOperation, current.Type, state, maxinboxsize));
 
             if (!this.TransitionFrequencies.ContainsKey(state))
             {
@@ -352,17 +363,29 @@ namespace Microsoft.Coyote.Testing.Systematic
         internal override bool InitializeNextIteration(uint iteration)
         {
             // Dump the statecoverage data in a .csv file, File path to be specified according to the benchmark being used.
-            string fileName = "../../../Benchmarks/Chord/out/StateCoverage/QL/data_" + DateTime.Now.ToString("dd_MM_yyyy_hh_mm_ss") + ".csv";
+            // string fileName = "../../../Benchmarks/Chord/out/StateCoverage/QL/data_" + DateTime.Now.ToString("dd_MM_yyyy_hh_mm_ss") + ".csv";
+            // string epochs = this.Epochs.ToString();
+            // string statecount = this.OperationQTable.Count.ToString();
+
+            // if (!File.Exists(fileName))
+            // {
+            //     string dataHeader = "Epoch" + "," + "Statecount" + Environment.NewLine;
+            //     File.WriteAllText(fileName, dataHeader);
+            // }
+
+            // File.AppendAllText(fileName, epochs + "," + statecount + Environment.NewLine);
+
+            // Dump the Inbox size data in a .csv file.
+            string size = this.MaxInboxSize().ToString();
+            // Console.WriteLine(size);
             string epochs = this.Epochs.ToString();
-            string statecount = this.OperationQTable.Count.ToString();
 
-            if (!File.Exists(fileName))
-            {
-                string dataHeader = "Epoch" + "," + "Statecount" + Environment.NewLine;
-                File.WriteAllText(fileName, dataHeader);
-            }
+            // if (!File.Exists(this.fileName))
+            // {
+            //     File.WriteAllText(this.fileName, this.dataHeader);
+            // }
 
-            File.AppendAllText(fileName, epochs + "," + statecount + Environment.NewLine);
+            // File.AppendAllText(this.fileName, epochs + "," + size + Environment.NewLine);
 
             this.LearnQValues();
             this.ExecutionPath.Clear();
@@ -370,6 +393,25 @@ namespace Microsoft.Coyote.Testing.Systematic
             this.Epochs++;
 
             return base.InitializeNextIteration(iteration);
+        }
+
+        // Find max inbox size in the whole execution path.
+        private int MaxInboxSize()
+        {
+            int size = 0;
+            var node = this.ExecutionPath.First;
+            while (node?.Next != null)
+            {
+                var (_, _, _, maxinboxsize) = node.Value;
+                if (size <= maxinboxsize)
+                {
+                    size = maxinboxsize;
+                }
+
+                node = node.Next;
+            }
+
+            return size;
         }
 
         /// <summary>
@@ -385,8 +427,8 @@ namespace Microsoft.Coyote.Testing.Systematic
             {
                 pathBuilder.Append($"{node.Value.op},");
 
-                var (_, _, state) = node.Value;
-                var (nextOp, nextType, nextState) = node.Next.Value;
+                var (_, _, state, maxinboxsize) = node.Value;
+                var (nextOp, nextType, nextState, nextmaxinboxsize) = node.Next.Value;
 
                 // Compute the max Q value.
                 double maxQ = double.MinValue;
