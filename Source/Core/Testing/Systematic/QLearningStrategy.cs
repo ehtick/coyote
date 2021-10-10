@@ -432,12 +432,12 @@ namespace Microsoft.Coyote.Testing.Systematic
             {
                 pathBuilder.Append($"{node.Value.op},");
 
-                var (_, _, state, maxinboxsize) = node.Value;
-                var (nextOp, nextType, nextState, nextmaxinboxsize) = node.Previous.Value;
+                var (op, type, state, maxinboxsize) = node.Value;
+                var (previousOp, previousType, previousState, previousmaxinboxsize) = node.Previous.Value;
 
                 // Compute the max Q value.
                 double maxQ = double.MinValue;
-                foreach (var nextOpQValuePair in this.OperationQTable[nextState])
+                foreach (var nextOpQValuePair in this.OperationQTable[state])
                 {
                     if (nextOpQValuePair.Value > maxQ)
                     {
@@ -446,8 +446,8 @@ namespace Microsoft.Coyote.Testing.Systematic
                 }
 
                 // Compute the reward. Program states that are visited with higher frequency result into lesser rewards.
-                var freq = this.TransitionFrequencies[nextState];
-                double reward = (nextType == AsyncOperationType.InjectFailure ?
+                var freq = this.TransitionFrequencies[state];
+                double reward = (type == AsyncOperationType.InjectFailure ?
                     this.FailureInjectionReward : this.BasicActionReward) * freq;
                 if (reward > 0)
                 {
@@ -456,15 +456,15 @@ namespace Microsoft.Coyote.Testing.Systematic
                 }
 
                 // Get the operations that are available from the current execution step.
-                var currOpQValues = this.OperationQTable[state];
-                if (!currOpQValues.ContainsKey(nextOp))
+                var currOpQValues = this.OperationQTable[previousState];
+                if (!currOpQValues.ContainsKey(op))
                 {
-                    currOpQValues.Add(nextOp, 0);
+                    currOpQValues.Add(op, 0);
                 }
 
                 // Update the Q value of the next operation.
                 // Q = [(1-a) * Q]  +  [a * (rt + (g * maxQ))]
-                currOpQValues[nextOp] = ((1 - this.LearningRate) * currOpQValues[nextOp]) +
+                currOpQValues[op] = ((1 - this.LearningRate) * currOpQValues[op]) +
                     (this.LearningRate * (reward + (this.Gamma * maxQ)));
 
                 node = node.Previous;
