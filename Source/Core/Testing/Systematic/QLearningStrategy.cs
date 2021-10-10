@@ -420,20 +420,20 @@ namespace Microsoft.Coyote.Testing.Systematic
         }
 
         /// <summary>
-        /// Learn Q values using data from the current execution.
+        /// Learn Q values using data from the last state in current execution.
         /// </summary>
         private void LearnQValues()
         {
             var pathBuilder = new System.Text.StringBuilder();
 
             int idx = 0;
-            var node = this.ExecutionPath.First;
-            while (node?.Next != null)
+            var node = this.ExecutionPath.Last;
+            while (node?.Previous != null)
             {
                 pathBuilder.Append($"{node.Value.op},");
 
                 var (_, _, state, maxinboxsize) = node.Value;
-                var (nextOp, nextType, nextState, nextmaxinboxsize) = node.Next.Value;
+                var (nextOp, nextType, nextState, nextmaxinboxsize) = node.Previous.Value;
 
                 // Compute the max Q value.
                 double maxQ = double.MinValue;
@@ -467,7 +467,7 @@ namespace Microsoft.Coyote.Testing.Systematic
                 currOpQValues[nextOp] = ((1 - this.LearningRate) * currOpQValues[nextOp]) +
                     (this.LearningRate * (reward + (this.Gamma * maxQ)));
 
-                node = node.Next;
+                node = node.Previous;
                 idx++;
             }
         }
