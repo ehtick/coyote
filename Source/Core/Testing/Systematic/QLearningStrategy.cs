@@ -216,19 +216,24 @@ namespace Microsoft.Coyote.Testing.Systematic
         /// </summary>
         private int ChooseQValueIndexFromDistribution(List<double> qValues)
         {
+            List<double> aux_sum = qValues;
+            for (int i = 0; i < qValues.Count; i++)
+            {
+                double qv = aux_sum[i];
+                aux_sum[i] = 0;
+
+                for (int j = 0; j < qValues.Count; j++)
+                {
+                    aux_sum[i] += Math.Exp(qValues[j] - qv);
+                }
+            }
+
+            for (int i = 0; i < qValues.Count; i++)
+            {
+                qValues[i] = 1 / aux_sum[i];
+            }
+
             double sum = 0;
-            for (int i = 0; i < qValues.Count; i++)
-            {
-                qValues[i] = Math.Exp(qValues[i]);
-                sum += qValues[i];
-            }
-
-            for (int i = 0; i < qValues.Count; i++)
-            {
-                qValues[i] /= sum;
-            }
-
-            sum = 0;
 
             // First, change the shape of the distribution probability array to be cumulative.
             // For example, instead of [0.1, 0.2, 0.3, 0.4], we get [0.1, 0.3, 0.6, 1.0].
