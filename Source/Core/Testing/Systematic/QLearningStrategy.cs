@@ -216,11 +216,11 @@ namespace Microsoft.Coyote.Testing.Systematic
         /// </summary>
         private int ChooseQValueIndexFromDistribution(List<double> qValues)
         {
-            List<double> aux_sum = qValues;
+            List<double> aux_sum = new List<double>();
             for (int i = 0; i < qValues.Count; i++)
             {
-                double qv = aux_sum[i];
-                aux_sum[i] = 0;
+                double qv = qValues[i];
+                aux_sum.Add(0);
 
                 for (int j = 0; j < qValues.Count; j++)
                 {
